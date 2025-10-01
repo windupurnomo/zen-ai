@@ -47,13 +47,13 @@ class IntentClassifier:
 
         return intent_examples
 
-    def classify(self, user_input: str, threshold: float = 0.5):
+    def classify(self, user_input: str, threshold: float = 0.45):
         """
         Klasifikasi intent dari input user
 
         Args:
             user_input: Kalimat input dari user
-            threshold: Threshold similarity (default 0.5)
+            threshold: Threshold similarity (default 0.45)
 
         Returns:
             tuple: (intent_name, similarity_score)

@@ -8,7 +8,12 @@
         "Show semua todo",
         "Tampilkan seluruh daftar",
         "Mau lihat semua",
-        "Tampilkan list todo"
+        "Tampilkan list todo",
+        "Cek semua task yang ada",
+        "Lihat daftar lengkap",
+        "Tunjukkan semua pekerjaan",
+        "Apa saja task yang ada",
+        "List semua todo"
       ]
     },
     "show_done": {
@@ -19,7 +24,12 @@
         "Show task selesai",
         "Tampilkan yang sudah dikerjakan",
         "Mau lihat yang sudah selesai",
-        "Task apa saja yang sudah done"
+        "Task apa saja yang sudah done",
+        "Cek task yang sudah complete",
+        "Lihat pekerjaan yang sudah beres",
+        "Apa yang sudah selesai dikerjakan",
+        "Tunjukkan task yang sudah finish",
+        "List task yang sudah kelar"
       ]
     },
     "show_pending": {
@@ -30,7 +40,12 @@
         "Show task yang belum dikerjakan",
         "Tampilkan yang belum selesai",
         "Mau lihat yang pending",
-        "Task apa yang masih pending"
+        "Task apa yang masih pending",
+        "Cek task yang masih outstanding",
+        "Lihat pekerjaan yang belum beres",
+        "Apa yang belum dikerjakan",
+        "Tunjukkan task yang masih harus diselesaikan",
+        "List tugas yang belum kelar"
       ]
     },
     "insert_task": {
@@ -41,7 +56,16 @@
         "Tambahkan tugas meeting",
         "Insert task shopping",
         "Bikin task olahraga",
-        "Tambahin task makan"
+        "Tambahin task makan",
+        "Buat task perbaiki error pada halaman login",
+        "Tambah task review code untuk fitur payment",
+        "Bikin task diskusi dengan team tentang timeline project",
+        "Tambahkan task baca dokumentasi API",
+        "Buat task baru refactor database schema",
+        "Tambah tugas implementasi fitur search",
+        "Bikin task testing untuk modul authentication",
+        "Tambahkan task update dependencies ke versi terbaru",
+        "Buat task meeting dengan client jam 2 siang"
       ]
     },
     "delete_task": {
@@ -52,7 +76,12 @@
         "Hapus tugas nomor 2",
         "Remove task 1",
         "Buang task nomor 4",
-        "Hapus task yang ke 6"
+        "Hapus task yang ke 6",
+        "Apus task 7",
+        "Hapusin task nomor 8",
+        "Delete tugas yang ke 9",
+        "Hilangkan task id 10",
+        "Buang tugas nomor 11"
       ]
     },
     "update_status": {
@@ -63,7 +92,13 @@
         "Ganti status task 5 pending",
         "Set status task 1 done",
         "Tandai task 4 sudah selesai",
-        "Update task 2 jadi pending"
+        "Update task 2 jadi pending",
+        "Mark task 6 sebagai complete",
+        "Ubah task 7 jadi finish",
+        "Ganti status tugas 8 done",
+        "Set task 9 selesai",
+        "Tandai tugas nomor 10 sudah beres",
+        "Update status id 11 jadi belum selesai"
       ]
     }
   }
