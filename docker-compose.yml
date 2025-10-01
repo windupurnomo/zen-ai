@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  nl2sql-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nl2sql-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - WORKERS=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - nl2sql-network
+    # Optional: Mount volume untuk development
+    # volumes:
+    #   - ./knowledge_base.json:/app/knowledge_base.json:ro
+
+networks:
+  nl2sql-network:
+    driver: bridge

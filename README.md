@@ -23,24 +23,122 @@ Project ini mendukung 6 intent utama:
 5. **delete_task** - Menghapus task berdasarkan ID
 6. **update_status** - Mengubah status task
 
-## Instalasi
+## Instalasi & Deployment
 
-1. Install dependencies:
+### Option 1: Docker (Recommended for Production)
+
+**Prerequisites:**
+- Docker & Docker Compose installed
+
+**Quick Start:**
+```bash
+# Build dan run dengan docker-compose
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f
+
+# Stop container
+docker-compose down
+```
+
+**Manual Docker Commands:**
+```bash
+# Build image
+docker build -t nl2sql-api .
+
+# Run container
+docker run -d \
+  --name nl2sql-api \
+  -p 8000:8000 \
+  nl2sql-api
+
+# Check health
+docker ps
+curl http://localhost:8000/health
+```
+
+**Production Deployment:**
+```bash
+# Build untuk production
+docker build -t nl2sql-api:latest .
+
+# Run dengan custom configuration
+docker run -d \
+  --name nl2sql-api \
+  -p 8000:8000 \
+  --restart unless-stopped \
+  --memory="2g" \
+  --cpus="1.0" \
+  nl2sql-api:latest
+```
+
+### Option 2: Local Development
+
+**Prerequisites:**
+- Python 3.11+
+
+**Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Jalankan aplikasi:
-```bash
-python main.py
-```
-
 ## Cara Penggunaan
 
-### Mode Demo
+Project ini dapat dijalankan dalam 3 mode:
+
+### 1. REST API Mode (Recommended)
+
+**Menjalankan API Server:**
+```bash
+# Jalankan dengan uvicorn
+uvicorn api:app --reload --host 0.0.0.0 --port 8000
+
+# Atau jalankan langsung
+python api.py
+```
+
+**Akses API Documentation:**
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+**Test API dengan curl:**
+```bash
+# POST request untuk convert NL to SQL
+curl -X POST http://localhost:8000/api/v1/nl2sql \
+  -H "Content-Type: application/json" \
+  -d '{"message": "buat task belajar Python"}'
+
+# GET health check
+curl http://localhost:8000/health
+
+# GET supported intents
+curl http://localhost:8000/api/v1/intents
+```
+
+**Contoh Response:**
+```json
+{
+  "success": true,
+  "intent": "insert_task",
+  "confidence": 0.856,
+  "sql_query": "INSERT INTO todo (task, status) VALUES ('belajar python', 'pending');",
+  "input": "buat task belajar Python",
+  "error": null
+}
+```
+
+### 2. CLI Mode (Command Line Interface)
+
+**Jalankan CLI:**
+```bash
+python cli.py
+```
+
+**Mode Demo:**
 Saat pertama kali dijalankan, aplikasi akan menampilkan demo dengan beberapa contoh query.
 
-### Mode Interaktif
+**Mode Interaktif:**
 Setelah demo, Anda bisa memasukkan perintah sendiri. Contoh:
 
 ```
@@ -54,6 +152,9 @@ Ketik `exit`, `quit`, atau `keluar` untuk keluar dari mode interaktif.
 
 ## Teknologi
 
+- **FastAPI**: Modern, fast web framework untuk building APIs
+- **Uvicorn**: ASGI server untuk production-ready deployment
+- **Pydantic**: Data validation dan settings management
 - **sentence-transformers**: Untuk embedding kalimat (model: paraphrase-multilingual-MiniLM-L12-v2)
 - **scikit-learn**: Untuk menghitung cosine similarity
 - **pytest**: Untuk unit testing
@@ -63,10 +164,16 @@ Ketik `exit`, `quit`, atau `keluar` untuk keluar dari mode interaktif.
 
 ```
 todo/
-├── main.py                   # Aplikasi utama
+├── api.py                    # FastAPI application (REST API)
+├── cli.py                    # Command Line Interface
+├── service.py                # Business logic service layer
+├── schemas.py                # Pydantic models untuk request/response
 ├── intent_classifier.py      # Modul klasifikasi intent
 ├── sql_generator.py          # Modul generator SQL query
 ├── knowledge_base.json       # Database intent dan contoh kalimat
+├── Dockerfile                # Docker container configuration
+├── docker-compose.yml        # Docker Compose setup
+├── .dockerignore            # Docker ignore file
 ├── tests/                    # Unit tests
 │   ├── __init__.py
 │   ├── test_insert_task.py   # Tests untuk insert_task intent
@@ -78,20 +185,58 @@ todo/
 
 ## Arsitektur
 
-1. **Intent Classification**:
-   - Menggunakan sentence embeddings dan cosine similarity untuk mencocokkan input user dengan intent yang tersedia
-   - Knowledge base disimpan dalam `knowledge_base.json` untuk kemudahan maintenance
+### Layered Architecture
+
+```
+┌─────────────────────────────────────────┐
+│         API Layer (api.py)              │  <- FastAPI endpoints
+│  - POST /api/v1/nl2sql                  │
+│  - GET  /health                         │
+│  - GET  /api/v1/intents                 │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│      Service Layer (service.py)         │  <- Business logic
+│  - NL2SQLService (Singleton)            │
+│  - process() method                     │
+└─────────────────┬───────────────────────┘
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+┌───────▼──────┐   ┌────────▼────────┐
+│ IntentClass  │   │  SQLGenerator   │      <- Core logic
+│ ifier        │   │                 │
+└──────────────┘   └─────────────────┘
+```
+
+### Komponen:
+
+1. **API Layer** (`api.py`):
+   - FastAPI application dengan REST endpoints
+   - Request/response validation dengan Pydantic
+   - CORS middleware untuk frontend integration
+   - Error handling dan logging
+
+2. **Service Layer** (`service.py`):
+   - Business logic layer (Singleton pattern)
+   - Orchestrates intent classification dan SQL generation
+   - Returns structured response dict
+
+3. **Intent Classification** (`intent_classifier.py`):
+   - Sentence embeddings dan cosine similarity
+   - Knowledge base dari `knowledge_base.json`
    - Threshold similarity default: 0.45
-   - Setiap intent memiliki 10-15 contoh kalimat untuk training
+   - 10-15 contoh kalimat per intent
 
-2. **Parameter Extraction**:
-   - **Task Name**: Keyword-based extraction yang menghapus intent keywords dan filler words
-   - **Task ID**: Regex pattern matching untuk extract angka ID
-   - **Status**: Keyword matching untuk 'done' atau 'pending'
+4. **Parameter Extraction & SQL Generation** (`sql_generator.py`):
+   - **Task Name**: Keyword-based extraction
+   - **Task ID**: Regex pattern matching
+   - **Status**: Keyword matching
+   - SQL injection prevention
 
-3. **SQL Generation**:
-   - Generate query SQL berdasarkan intent dan parameter yang telah di-extract
-   - SQL injection prevention dengan escaping single quotes
+5. **Data Models** (`schemas.py`):
+   - Pydantic models untuk type safety
+   - Auto-generated API documentation
 
 ## Testing
 
