@@ -1,14 +1,14 @@
 """
-Unit tests for SQLGenerator - insert_task intent
-Testing extract_task_name() method dengan berbagai skenario
+Unit tests for insert_task intent
+Testing extract_task_name() method dan intent classification
 """
 
 import pytest
 from sql_generator import SQLGenerator
 
 
-class TestSQLGeneratorInsertTask:
-    """Test cases untuk intent insert_task, khususnya extract_task_name()"""
+class TestInsertTaskExtraction:
+    """Test cases untuk insert_task intent - extraction task name"""
 
     @pytest.fixture
     def generator(self):
@@ -133,6 +133,58 @@ class TestSQLGeneratorInsertTask:
         """Test generate() method untuk intent insert_task"""
         result = generator.generate('insert_task', user_input)
         assert result == expected_sql, f"SQL mismatch for input: '{user_input}'"
+
+
+class TestInsertTaskIntentClassification:
+    """Test untuk memastikan intent insert_task classification"""
+
+    @pytest.fixture
+    def classifier(self):
+        """Fixture untuk IntentClassifier instance"""
+        from intent_classifier import IntentClassifier
+        return IntentClassifier()
+
+    @pytest.mark.parametrize("user_input,should_be_insert", [
+        # === TRUE INSERT INTENTS ===
+        ("buat task belajar", True),
+        ("tambah task coding", True),
+        ("bikin task meeting", True),
+        ("tambahkan task review code", True),
+        ("buat task perbaiki error pada halaman login", True),
+
+        # === FALSE POSITIVES - Should NOT be insert ===
+        # Delete task
+        ("hapus task nomor 3", False),
+        ("delete task id 5", False),
+
+        # Update task
+        ("update status task 3 jadi done", False),
+        ("ubah task 2 jadi selesai", False),
+
+        # Show commands
+        ("tampilkan semua task", False),
+        ("lihat task yang sudah selesai", False),
+    ])
+    def test_insert_task_intent_classification(self, classifier, user_input, should_be_insert):
+        """
+        Test bahwa intent classifier dapat membedakan insert_task dari intent lain
+
+        Mencegah false positive dimana:
+        - "hapus task nomor 3" tidak terdeteksi sebagai insert
+        - Hanya perintah create/add yang jelas yang terdeteksi sebagai insert_task
+        """
+        intent, score = classifier.classify(user_input)
+
+        if should_be_insert:
+            assert intent == 'insert_task', (
+                f"Input: '{user_input}' should be classified as insert_task, "
+                f"but got '{intent}' with score {score:.3f}"
+            )
+        else:
+            assert intent != 'insert_task', (
+                f"Input: '{user_input}' should NOT be classified as insert_task, "
+                f"but got '{intent}' with score {score:.3f}"
+            )
 
 
 if __name__ == "__main__":

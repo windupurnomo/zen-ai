@@ -67,7 +67,10 @@ todo/
 ├── intent_classifier.py      # Modul klasifikasi intent
 ├── sql_generator.py          # Modul generator SQL query
 ├── knowledge_base.json       # Database intent dan contoh kalimat
-├── test_sql_generator.py     # Unit tests
+├── tests/                    # Unit tests
+│   ├── __init__.py
+│   ├── test_insert_task.py   # Tests untuk insert_task intent
+│   └── test_delete_task.py   # Tests untuk delete_task intent
 ├── requirements.txt          # Dependencies
 ├── .gitignore               # Git ignore file
 └── README.md                # Dokumentasi
@@ -92,23 +95,123 @@ todo/
 
 ## Testing
 
-Project ini dilengkapi dengan comprehensive unit tests untuk memastikan kualitas extraction.
+Project ini dilengkapi dengan comprehensive unit tests untuk memastikan kualitas extraction dan mencegah false positive pada intent classification.
+
+### Instalasi Testing Tools
 
 ```bash
-# Install pytest (jika belum)
 pip install pytest
-
-# Run all tests
-pytest test_sql_generator.py -v
-
-# Run specific test
-pytest test_sql_generator.py::TestSQLGeneratorInsertTask::test_extract_task_name -v
 ```
 
-**Test Coverage:**
-- 40+ test cases untuk `extract_task_name()`
-- Mencakup: basic cases, long descriptions, edge cases, mixed language, real-world examples
-- SQL generation tests dengan SQL injection prevention
+### Cara Menjalankan Tests
+
+**1. Run All Tests**
+```bash
+pytest tests/ -v
+```
+
+**2. Test Per Intent**
+
+**Insert Task Intent:**
+```bash
+# Run semua tests insert_task
+pytest tests/test_insert_task.py -v
+
+# Test extraction task name saja
+pytest tests/test_insert_task.py::TestInsertTaskExtraction -v
+
+# Test intent classification saja
+pytest tests/test_insert_task.py::TestInsertTaskIntentClassification -v
+
+# Test specific case
+pytest tests/test_insert_task.py::TestInsertTaskExtraction::test_extract_task_name -v
+```
+
+**Delete Task Intent:**
+```bash
+# Run semua tests delete_task
+pytest tests/test_delete_task.py -v
+
+# Test extraction task ID saja
+pytest tests/test_delete_task.py::TestDeleteTaskExtraction -v
+
+# Test intent classification saja (mencegah false positive)
+pytest tests/test_delete_task.py::TestDeleteTaskIntentClassification -v
+
+# Test specific case
+pytest tests/test_delete_task.py::TestDeleteTaskExtraction::test_extract_task_id -v
+```
+
+**3. Run Tests dengan Filter**
+```bash
+# Run hanya extraction tests (tanpa intent classification)
+pytest tests/ -k "Extraction" -v
+
+# Run hanya intent classification tests
+pytest tests/ -k "IntentClassification" -v
+
+# Run tests dengan quiet mode
+pytest tests/ -q
+
+# Run dengan summary
+pytest tests/ --tb=short
+```
+
+### Test Coverage
+
+**test_insert_task.py** (57 tests):
+- ✅ **Extraction Tests (49 tests)**:
+  - 46 tests `extract_task_name()` dengan berbagai skenario:
+    - Basic cases (task name pendek)
+    - Long descriptions (deskripsi kompleks)
+    - Various keywords (tambah, buat, bikin, insert, add)
+    - Filler words (untuk, yang, yaitu)
+    - Edge cases (uppercase, multiple spaces, multiple keywords)
+    - Mixed language (Indonesian + English)
+    - Real-world examples
+  - 2 tests edge cases (empty result, only filler words)
+  - 3 tests SQL generation dengan SQL injection prevention
+
+- ✅ **Intent Classification Tests (6 tests)**:
+  - Memastikan input insert terdeteksi dengan benar
+  - Mencegah false positive (hapus/update tidak terdeteksi sebagai insert)
+
+**test_delete_task.py** (57 tests):
+- ✅ **Extraction Tests (38 tests)**:
+  - 21 tests `extract_task_id()` dari berbagai format:
+    - Basic delete commands
+    - Various delete keywords (hapus, delete, remove, buang, hilangkan)
+    - Informal expressions (hapusin, buangin)
+    - Extra words after ID
+    - Edge cases (uppercase, spaces, large IDs)
+  - 11 tests false positive awareness (masih extract ID dari non-delete intent)
+  - 1 test no ID found
+  - 5 tests SQL generation dan error handling
+
+- ✅ **Intent Classification Tests (19 tests)**:
+  - Memastikan delete commands terdeteksi dengan benar
+  - **Krusial**: Mencegah false positives seperti:
+    - "buat task review PR nomor 3" → BUKAN delete
+    - "tampilkan task nomor 5" → BUKAN delete
+    - "update status task 3 jadi done" → BUKAN delete
+
+### Interpretasi Hasil Test
+
+**✅ All Passed**: Extraction dan classification berjalan sempurna
+
+**❌ Failed pada Intent Classification**: Kemungkinan causes:
+- Knowledge base perlu diperkaya dengan lebih banyak contoh
+- Ada overlap similarity antar intent
+- Threshold perlu disesuaikan
+
+**Contoh Output:**
+```
+FAILED test_delete_task.py::...::test_delete_task_intent_classification[buat task review PR nomor 3-False]
+AssertionError: Input: 'buat task review PR nomor 3' should NOT be classified as delete_task,
+but got 'delete_task' with score 0.782
+```
+
+Ini menandakan ada **false positive** yang perlu diperbaiki di knowledge base.
 
 ## Menambah/Mengubah Intent
 
