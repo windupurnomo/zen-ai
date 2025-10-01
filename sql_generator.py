@@ -46,11 +46,15 @@ class SQLGenerator:
         # Clean up: remove extra whitespace dan strip
         text = re.sub(r'\s+', ' ', text).strip()
 
-        # Remove filler words di awal kalimat (untuk, yang, dengan, etc.)
-        filler_start_words = ['untuk', 'yang', 'yaitu', 'adalah']
-        for filler in filler_start_words:
+        # Remove filler words (di awal atau standalone)
+        filler_words = ['untuk', 'yang', 'yaitu', 'adalah']
+        for filler in filler_words:
+            # Remove di awal kalimat dengan spasi setelahnya
             if text.startswith(filler + ' '):
                 text = text[len(filler):].strip()
+            # Remove jika hanya filler word saja (standalone)
+            elif text == filler:
+                text = ''
 
         # Jika hasilnya kosong atau terlalu pendek, return default
         if not text or len(text) < 2:
