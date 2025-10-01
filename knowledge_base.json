@@ -1,0 +1,70 @@
+{
+  "intents": {
+    "show_all": {
+      "description": "Menampilkan semua task dalam todo list",
+      "examples": [
+        "Tampilkan semua task",
+        "Lihat semua tugas",
+        "Show semua todo",
+        "Tampilkan seluruh daftar",
+        "Mau lihat semua",
+        "Tampilkan list todo"
+      ]
+    },
+    "show_done": {
+      "description": "Menampilkan task yang sudah selesai",
+      "examples": [
+        "Tampilkan task yang sudah selesai",
+        "Lihat tugas yang done",
+        "Show task selesai",
+        "Tampilkan yang sudah dikerjakan",
+        "Mau lihat yang sudah selesai",
+        "Task apa saja yang sudah done"
+      ]
+    },
+    "show_pending": {
+      "description": "Menampilkan task yang belum selesai",
+      "examples": [
+        "Tampilkan task yang belum selesai",
+        "Lihat tugas pending",
+        "Show task yang belum dikerjakan",
+        "Tampilkan yang belum selesai",
+        "Mau lihat yang pending",
+        "Task apa yang masih pending"
+      ]
+    },
+    "insert_task": {
+      "description": "Menambahkan task baru ke todo list",
+      "examples": [
+        "Tambah task belajar",
+        "Buat task baru coding",
+        "Tambahkan tugas meeting",
+        "Insert task shopping",
+        "Bikin task olahraga",
+        "Tambahin task makan"
+      ]
+    },
+    "delete_task": {
+      "description": "Menghapus task berdasarkan ID",
+      "examples": [
+        "Hapus task nomor 3",
+        "Delete task id 5",
+        "Hapus tugas nomor 2",
+        "Remove task 1",
+        "Buang task nomor 4",
+        "Hapus task yang ke 6"
+      ]
+    },
+    "update_status": {
+      "description": "Mengubah status task menjadi done atau pending",
+      "examples": [
+        "Update status task 3 jadi done",
+        "Ubah status nomor 2 jadi selesai",
+        "Ganti status task 5 pending",
+        "Set status task 1 done",
+        "Tandai task 4 sudah selesai",
+        "Update task 2 jadi pending"
+      ]
+    }
+  }
+}

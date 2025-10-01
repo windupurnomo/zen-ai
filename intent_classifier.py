@@ -6,70 +6,46 @@ Menggunakan sentence embeddings untuk mencocokkan input user dengan intent yang 
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import json
+import os
 
 
 class IntentClassifier:
-    def __init__(self):
+    def __init__(self, knowledge_base_path='knowledge_base.json'):
         # Load pre-trained Indonesian sentence transformer model
         self.model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
-        # Definisi intent dan contoh kalimat untuk setiap intent
-        self.intent_examples = {
-            'show_all': [
-                'Tampilkan semua task',
-                'Lihat semua tugas',
-                'Show semua todo',
-                'Tampilkan seluruh daftar',
-                'Mau lihat semua',
-                'Tampilkan list todo'
-            ],
-            'show_done': [
-                'Tampilkan task yang sudah selesai',
-                'Lihat tugas yang done',
-                'Show task selesai',
-                'Tampilkan yang sudah dikerjakan',
-                'Mau lihat yang sudah selesai',
-                'Task apa saja yang sudah done'
-            ],
-            'show_pending': [
-                'Tampilkan task yang belum selesai',
-                'Lihat tugas pending',
-                'Show task yang belum dikerjakan',
-                'Tampilkan yang belum selesai',
-                'Mau lihat yang pending',
-                'Task apa yang masih pending'
-            ],
-            'insert_task': [
-                'Tambah task belajar',
-                'Buat task baru coding',
-                'Tambahkan tugas meeting',
-                'Insert task shopping',
-                'Bikin task olahraga',
-                'Tambahin task makan'
-            ],
-            'delete_task': [
-                'Hapus task nomor 3',
-                'Delete task id 5',
-                'Hapus tugas nomor 2',
-                'Remove task 1',
-                'Buang task nomor 4',
-                'Hapus task yang ke 6'
-            ],
-            'update_status': [
-                'Update status task 3 jadi done',
-                'Ubah status nomor 2 jadi selesai',
-                'Ganti status task 5 pending',
-                'Set status task 1 done',
-                'Tandai task 4 sudah selesai',
-                'Update task 2 jadi pending'
-            ]
-        }
+        # Load knowledge base dari file JSON
+        self.intent_examples = self._load_knowledge_base(knowledge_base_path)
 
         # Pre-compute embeddings untuk semua contoh kalimat
         self.intent_embeddings = {}
         for intent, examples in self.intent_examples.items():
             embeddings = self.model.encode(examples)
             self.intent_embeddings[intent] = embeddings
+
+    def _load_knowledge_base(self, kb_path: str) -> dict:
+        """
+        Load knowledge base dari file JSON
+
+        Args:
+            kb_path: Path ke file knowledge base JSON
+
+        Returns:
+            dict: Dictionary berisi intent dan contoh kalimat
+        """
+        if not os.path.exists(kb_path):
+            raise FileNotFoundError(f"Knowledge base file not found: {kb_path}")
+
+        with open(kb_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Extract examples dari struktur JSON
+        intent_examples = {}
+        for intent_name, intent_data in data['intents'].items():
+            intent_examples[intent_name] = intent_data['examples']
+
+        return intent_examples
 
     def classify(self, user_input: str, threshold: float = 0.5):
         """
