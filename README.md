@@ -25,10 +25,29 @@ Project ini mendukung 6 intent utama:
 
 ## Instalasi & Deployment
 
+### Prerequisites
+
+**Database Setup:**
+- PostgreSQL database (remote atau local)
+- AWS account dengan AWS SSM Parameter Store (untuk production)
+- AWS credentials configured (via AWS CLI atau environment variables)
+
+**Environment Configuration:**
+```bash
+# Copy template environment file
+cp .env.example .env
+
+# Edit .env dan sesuaikan dengan konfigurasi Anda
+# - Untuk production: Set USE_AWS_SSM=true dan configure AWS SSM parameter names
+# - Untuk local dev: Set USE_AWS_SSM=false dan isi DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+```
+
 ### Option 1: Docker (Recommended for Production)
 
 **Prerequisites:**
 - Docker & Docker Compose installed
+- PostgreSQL database sudah running
+- AWS SSM parameters sudah configured (jika USE_AWS_SSM=true)
 
 **Quick Start:**
 ```bash
@@ -77,10 +96,25 @@ docker run -d \
 
 **Prerequisites:**
 - Python 3.11+
+- PostgreSQL database running (local atau remote)
 
 **Install dependencies:**
 ```bash
 pip install -r requirements.txt
+```
+
+**Setup environment:**
+```bash
+# Copy dan edit environment file
+cp .env.example .env
+
+# Edit .env untuk local development:
+# USE_AWS_SSM=false
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=todo_db
+# DB_USER=postgres
+# DB_PASSWORD=your_password
 ```
 
 ## Cara Penggunaan
@@ -117,14 +151,49 @@ curl http://localhost:8000/api/v1/intents
 ```
 
 **Contoh Response:**
+
+**SELECT Query (show_all, show_done, show_pending):**
+```json
+{
+  "success": true,
+  "intent": "show_all",
+  "confidence": 0.923,
+  "data": [
+    {"id": 1, "task": "belajar python", "status": "pending"},
+    {"id": 2, "task": "review PR", "status": "done"}
+  ],
+  "rows_affected": 2,
+  "input": "tampilkan semua task",
+  "error": null,
+  "error_type": null
+}
+```
+
+**INSERT/UPDATE/DELETE Query:**
 ```json
 {
   "success": true,
   "intent": "insert_task",
   "confidence": 0.856,
-  "sql_query": "INSERT INTO todo (task, status) VALUES ('belajar python', 'pending');",
+  "data": null,
+  "rows_affected": 1,
   "input": "buat task belajar Python",
-  "error": null
+  "error": null,
+  "error_type": null
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "intent": null,
+  "confidence": 0.432,
+  "data": null,
+  "rows_affected": 0,
+  "input": "kalimat tidak jelas",
+  "error": "Intent tidak dapat diidentifikasi",
+  "error_type": "intent_error"
 }
 ```
 
@@ -159,6 +228,10 @@ Ketik `exit`, `quit`, atau `keluar` untuk keluar dari mode interaktif.
 - **scikit-learn**: Untuk menghitung cosine similarity
 - **pytest**: Untuk unit testing
 - **Regular Expression**: Untuk extract parameter (task name, ID, status)
+- **PostgreSQL**: Database untuk menyimpan todo tasks
+- **psycopg2**: PostgreSQL adapter untuk Python
+- **boto3**: AWS SDK untuk Python (AWS SSM integration)
+- **python-dotenv**: Environment variable management
 
 ## Struktur Project
 
@@ -170,7 +243,9 @@ todo/
 ├── schemas.py                # Pydantic models untuk request/response
 ├── intent_classifier.py      # Modul klasifikasi intent
 ├── sql_generator.py          # Modul generator SQL query
+├── db.py                     # Database manager dengan AWS SSM integration
 ├── knowledge_base.json       # Database intent dan contoh kalimat
+├── .env.example              # Template environment variables
 ├── Dockerfile                # Docker container configuration
 ├── docker-compose.yml        # Docker Compose setup
 ├── .dockerignore            # Docker ignore file
@@ -201,12 +276,17 @@ todo/
 │  - process() method                     │
 └─────────────────┬───────────────────────┘
                   │
-        ┌─────────┴─────────┐
-        │                   │
-┌───────▼──────┐   ┌────────▼────────┐
-│ IntentClass  │   │  SQLGenerator   │      <- Core logic
-│ ifier        │   │                 │
-└──────────────┘   └─────────────────┘
+        ┌─────────┴─────────┬──────────────┐
+        │                   │              │
+┌───────▼──────┐   ┌────────▼────────┐   ┌▼───────────────┐
+│ IntentClass  │   │  SQLGenerator   │   │ DatabaseMgr    │
+│ ifier        │   │                 │   │ (Singleton)    │
+└──────────────┘   └─────────────────┘   └────────┬───────┘
+                                                   │
+                                         ┌─────────▼─────────┐
+                                         │   PostgreSQL DB   │
+                                         │   (Remote/Local)  │
+                                         └───────────────────┘
 ```
 
 ### Komponen:
@@ -234,7 +314,15 @@ todo/
    - **Status**: Keyword matching
    - SQL injection prevention
 
-5. **Data Models** (`schemas.py`):
+5. **Database Manager** (`db.py`):
+   - PostgreSQL connection pooling (2-10 connections)
+   - AWS SSM Parameter Store integration
+   - Fallback to environment variables
+   - Query execution dengan error handling
+   - Auto-commit transactions
+   - Returns structured response: `{'success', 'data', 'rows_affected', 'error', 'error_type'}`
+
+6. **Data Models** (`schemas.py`):
    - Pydantic models untuk type safety
    - Auto-generated API documentation
 
@@ -357,6 +445,75 @@ but got 'delete_task' with score 0.782
 ```
 
 Ini menandakan ada **false positive** yang perlu diperbaiki di knowledge base.
+
+## AWS SSM Parameter Store Setup
+
+Untuk production deployment dengan AWS SSM:
+
+**1. Create SSM Parameters di AWS Console atau AWS CLI:**
+
+```bash
+# Host
+aws ssm put-parameter \
+    --name "/todo-api/db/host" \
+    --value "your-db-host.amazonaws.com" \
+    --type "String"
+
+# Port
+aws ssm put-parameter \
+    --name "/todo-api/db/port" \
+    --value "5432" \
+    --type "String"
+
+# Database Name
+aws ssm put-parameter \
+    --name "/todo-api/db/name" \
+    --value "todo_db" \
+    --type "String"
+
+# Username
+aws ssm put-parameter \
+    --name "/todo-api/db/user" \
+    --value "postgres" \
+    --type "String"
+
+# Password (encrypted)
+aws ssm put-parameter \
+    --name "/todo-api/db/password" \
+    --value "your-secure-password" \
+    --type "SecureString"
+```
+
+**2. Configure IAM Permissions:**
+
+Pastikan IAM role atau user yang digunakan memiliki permission:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameters",
+        "ssm:GetParameter"
+      ],
+      "Resource": "arn:aws:ssm:ap-southeast-1:*:parameter/todo-api/db/*"
+    }
+  ]
+}
+```
+
+**3. Set Environment Variables:**
+
+```bash
+USE_AWS_SSM=true
+AWS_REGION=ap-southeast-1
+DB_HOST_PARAM=/todo-api/db/host
+DB_PORT_PARAM=/todo-api/db/port
+DB_NAME_PARAM=/todo-api/db/name
+DB_USER_PARAM=/todo-api/db/user
+DB_PASSWORD_PARAM=/todo-api/db/password
+```
 
 ## Menambah/Mengubah Intent
 

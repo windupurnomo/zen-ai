@@ -6,6 +6,10 @@ Refactored business logic untuk digunakan oleh CLI dan API
 from typing import Tuple, Optional
 from intent_classifier import IntentClassifier
 from sql_generator import SQLGenerator
+from db import DatabaseManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class NL2SQLService:
@@ -24,18 +28,19 @@ class NL2SQLService:
         return cls._instance
 
     def __init__(self):
-        """Initialize classifier and generator (only once)"""
+        """Initialize classifier, generator, and database manager (only once)"""
         if not NL2SQLService._initialized:
             print("Initializing NL2SQL Service...")
             print("Loading sentence transformer model...")
             self.classifier = IntentClassifier()
             self.generator = SQLGenerator()
+            self.db_manager = DatabaseManager()
             NL2SQLService._initialized = True
             print("Service ready!")
 
     def process(self, user_input: str) -> dict:
         """
-        Process natural language input dan generate SQL query
+        Process natural language input, generate SQL query, and execute on database
 
         Args:
             user_input: Kalimat dalam bahasa Indonesia
@@ -46,9 +51,11 @@ class NL2SQLService:
                     'success': bool,
                     'intent': str | None,
                     'confidence': float,
-                    'sql_query': str | None,
+                    'data': List[Dict] | None,
+                    'rows_affected': int,
                     'input': str,
-                    'error': str | None
+                    'error': str | None,
+                    'error_type': str | None
                 }
         """
         # Klasifikasi intent
@@ -59,9 +66,11 @@ class NL2SQLService:
                 'success': False,
                 'intent': None,
                 'confidence': round(score, 3),
-                'sql_query': None,
+                'data': None,
+                'rows_affected': 0,
                 'input': user_input,
-                'error': 'Intent tidak dapat diidentifikasi'
+                'error': 'Intent tidak dapat diidentifikasi',
+                'error_type': 'intent_error'
             }
 
         # Generate SQL query
@@ -70,13 +79,32 @@ class NL2SQLService:
         # Check if SQL generation has error
         is_error = sql_query.startswith('-- Error:')
 
+        if is_error:
+            return {
+                'success': False,
+                'intent': intent,
+                'confidence': round(score, 3),
+                'data': None,
+                'rows_affected': 0,
+                'input': user_input,
+                'error': sql_query.replace('-- Error: ', ''),
+                'error_type': 'intent_error'
+            }
+
+        # Execute query on database
+        logger.info(f"Executing SQL: {sql_query}")
+        db_result = self.db_manager.execute_query(sql_query)
+
+        # Return combined result
         return {
-            'success': not is_error,
+            'success': db_result['success'],
             'intent': intent,
             'confidence': round(score, 3),
-            'sql_query': sql_query if not is_error else None,
+            'data': db_result['data'],
+            'rows_affected': db_result['rows_affected'],
             'input': user_input,
-            'error': sql_query.replace('-- Error: ', '') if is_error else None
+            'error': db_result['error'],
+            'error_type': db_result['error_type']
         }
 
     def get_supported_intents(self) -> list:

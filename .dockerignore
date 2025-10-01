@@ -61,3 +61,4 @@ models/
 !sql_generator.py
 !knowledge_base.json
 !requirements.txt
+!db.py

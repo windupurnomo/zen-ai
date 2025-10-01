@@ -37,6 +37,7 @@ COPY schemas.py .
 COPY intent_classifier.py .
 COPY sql_generator.py .
 COPY knowledge_base.json .
+COPY db.py .
 
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
