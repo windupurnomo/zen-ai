@@ -14,28 +14,49 @@ class SQLGenerator:
         """
         Extract nama task dari kalimat input untuk intent insert_task
 
+        Menggunakan keyword-based extraction: remove semua intent keywords
+        dan filler words, sisanya adalah task description.
+
         Args:
             user_input: Input dari user
 
         Returns:
             str: Nama task yang di-extract
+
+        Examples:
+            "buat task perbaiki error login" -> "perbaiki error login"
+            "tambahkan task baru review code" -> "review code"
+            "bikin task diskusi dengan team" -> "diskusi dengan team"
         """
-        # Pattern untuk extract task name
-        patterns = [
-            r'tambah(?:kan)?\s+task\s+(.+)',
-            r'buat\s+task\s+(?:baru\s+)?(.+)',
-            r'bikin\s+task\s+(.+)',
-            r'tambahin\s+task\s+(.+)',
-            r'insert\s+task\s+(.+)',
-            r'add\s+task\s+(.+)'
+        # Daftar intent keywords yang harus di-remove
+        intent_keywords = [
+            'tambah', 'tambahkan', 'buat', 'bikin', 'tambahin',
+            'insert', 'add', 'task', 'tugas', 'baru', 'new'
         ]
 
-        for pattern in patterns:
-            match = re.search(pattern, user_input.lower())
-            if match:
-                return match.group(1).strip()
+        # Convert ke lowercase untuk processing
+        text = user_input.lower()
 
-        return "new task"
+        # Remove semua intent keywords
+        for keyword in intent_keywords:
+            # Remove keyword dengan word boundary untuk avoid partial match
+            # Contoh: "tambah" tidak akan remove "tambahan"
+            text = re.sub(r'\b' + re.escape(keyword) + r'\b', '', text, flags=re.IGNORECASE)
+
+        # Clean up: remove extra whitespace dan strip
+        text = re.sub(r'\s+', ' ', text).strip()
+
+        # Remove filler words di awal kalimat (untuk, yang, dengan, etc.)
+        filler_start_words = ['untuk', 'yang', 'yaitu', 'adalah']
+        for filler in filler_start_words:
+            if text.startswith(filler + ' '):
+                text = text[len(filler):].strip()
+
+        # Jika hasilnya kosong atau terlalu pendek, return default
+        if not text or len(text) < 2:
+            return "new task"
+
+        return text
 
     def extract_task_id(self, user_input: str) -> int:
         """
